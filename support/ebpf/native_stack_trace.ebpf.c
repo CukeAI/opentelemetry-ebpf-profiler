@@ -517,10 +517,10 @@ static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *st
     if (info->fpOpcode == UNWIND_OPCODE_BASE_LR) {
       // Allow LR unwinding only if it's known to be valid: either because
       // it's the topmost user-mode frame, or recovered by signal trampoline.
-      if (state->lr_invalid) {
+      /*if (state->lr_invalid) {
         increment_metric(metricID_UnwindNativeErrLrUnwindingMidTrace);
         return ERR_NATIVE_LR_UNWINDING_MID_TRACE;
-      }
+      }*/
 
       // set return address location to link register
       state->pc = ra;
