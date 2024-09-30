@@ -34,6 +34,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/xi2/xz"
 	"go.opentelemetry.io/ebpf-profiler/libpf"
 	"go.opentelemetry.io/ebpf-profiler/libpf/readatbuf"
 	"go.opentelemetry.io/ebpf-profiler/remotememory"
@@ -164,6 +165,7 @@ type Section struct {
 
 	// Embed ReaderAt for ReadAt method.
 	io.ReaderAt
+	io.Reader
 
 	// Do not embed SectionReader directly, or as public member. We can't
 	// return the same copy to multiple callers, otherwise they corrupt
@@ -233,9 +235,9 @@ func newFile(r io.ReaderAt, closer io.Closer, loadAddress uint64, hasMusl bool) 
 
 	// if number of program headers is 0 this is likely not the ELF file we
 	// are interested in
-	if hdr.Phnum == 0 {
-		return nil, fmt.Errorf("ELF with zero Program headers (type: %v)", hdr.Type)
-	}
+	//if hdr.Phnum == 0 {
+	//return nil, fmt.Errorf("ELF with zero Program headers (type: %v)", hdr.Type)
+	//}
 
 	progs := make([]elf.Prog64, hdr.Phnum)
 	if _, err := r.ReadAt(libpf.SliceFrom(progs), int64(hdr.Phoff)); err != nil {
@@ -389,6 +391,7 @@ func (f *File) LoadSections() error {
 		}
 		s.sr = io.NewSectionReader(f.elfReader, int64(s.Offset), int64(s.FileSize))
 		s.ReaderAt = s.sr
+		s.Reader = s.sr
 	}
 
 	// Load the section name string table
@@ -702,6 +705,27 @@ func (f *File) OpenDebugLink(elfFilePath string, elfOpener ELFOpener) (
 		return debugELF, debugFile
 	}
 	return
+}
+
+func (f *File) ExtractAndOpenMiniDebugInfo() *File {
+	miniDebugData := f.Section(".gnu_debugdata")
+	if miniDebugData == nil {
+		return nil
+	}
+	xzReader, err := xz.NewReader(miniDebugData, 0)
+	if err != nil {
+		return nil
+	}
+	var uncompressed bytes.Buffer
+	_, err = io.Copy(&uncompressed, xzReader)
+	if err != nil {
+		return nil
+	}
+	miniDebugELF, err := NewFile(bytes.NewReader(uncompressed.Bytes()), 0, false)
+	if err != nil {
+		return nil
+	}
+	return miniDebugELF
 }
 
 // CRC32 calculates the .gnu_debuglink compatible CRC-32 of the ELF file

@@ -20,6 +20,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/testcontainers/testcontainers-go v0.35.0
 	github.com/tklauser/numcpus v0.8.0
+	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8
 	github.com/zeebo/xxh3 v1.0.2
 	go.opentelemetry.io/collector/component v0.116.0
 	go.opentelemetry.io/collector/consumer/consumertest v0.116.0
