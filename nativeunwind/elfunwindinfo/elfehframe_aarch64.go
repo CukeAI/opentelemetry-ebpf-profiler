@@ -109,6 +109,11 @@ func (regs *vmRegs) getUnwindInfoARM() sdtypes.UnwindInfo {
 		return sdtypes.UnwindInfoStop
 	}
 
+	// Undefined FP (aka X29/FP) marks end of function.
+	if regs.fp.reg == regUndefined {
+		return sdtypes.UnwindInfoStop
+	}
+
 	var info sdtypes.UnwindInfo
 
 	// Determine unwind info for stack pointer (CFA)
@@ -157,6 +162,20 @@ func (regs *vmRegs) getUnwindInfoARM() sdtypes.UnwindInfo {
 			info.FPParam = int32(regs.cfa.off) + int32(regs.ra.off)
 		}
 	}
-
+	switch regs.fp.reg {
+	case regCFA:
+		if regs.cfa.off != 0 {
+			info.RealFPOpcode = sdtypes.UnwindOpcodeBaseCFA
+			info.RealFPParam = int32(regs.fp.off)
+		}
+	case regSame:
+		info.RealFPOpcode = sdtypes.UnwindOpcodeCommand
+		info.RealFPParam = 0
+	case regExprReg:
+		if r, _, offrbp, _ := splitOff(regs.fp.off); uleb128(r) == armRegFP {
+			info.RealFPOpcode = sdtypes.UnwindOpcodeBaseFP
+			info.RealFPParam = int32(offrbp)
+		}
+	}
 	return info
 }

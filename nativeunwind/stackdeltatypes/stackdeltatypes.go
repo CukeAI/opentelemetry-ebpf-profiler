@@ -49,9 +49,9 @@ const (
 
 // UnwindInfo contains the data needed to unwind PC, SP and FP
 type UnwindInfo struct {
-	Opcode, FPOpcode, MergeOpcode uint8
+	Opcode, FPOpcode, RealFPOpcode, MergeOpcode uint8
 
-	Param, FPParam int32
+	Param, FPParam, RealFPParam int32
 }
 
 // UnwindInfoInvalid is the stack delta info indicating invalid or unsupported PC.

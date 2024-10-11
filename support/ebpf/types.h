@@ -897,9 +897,11 @@ typedef struct PerCPURecord {
 typedef struct UnwindInfo {
   u8 opcode;      // main opcode to unwind CFA
   u8 fpOpcode;    // opcode to unwind FP
+  u8 realFpOpcode; // opcode to unwind realFp
   u8 mergeOpcode; // opcode for generating next stack delta, see below
   s32 param;      // parameter for the CFA expression
   s32 fpParam;    // parameter for the FP expression
+  s32 realFpParam; // parameter for the FP expression, real frame pointer
 } UnwindInfo;
 
 // The 8-bit mergeOpcode consists of two separate fields:
