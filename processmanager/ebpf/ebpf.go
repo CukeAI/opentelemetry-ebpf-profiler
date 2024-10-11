@@ -587,11 +587,13 @@ func (impl *ebpfMapsImpl) UpdateUnwindInfo(index uint16, info sdtypes.UnwindInfo
 
 	key := C.u32(index)
 	value := C.UnwindInfo{
-		opcode:      C.u8(info.Opcode),
-		fpOpcode:    C.u8(info.FPOpcode),
-		mergeOpcode: C.u8(info.MergeOpcode),
-		param:       C.s32(info.Param),
-		fpParam:     C.s32(info.FPParam),
+		opcode:       C.u8(info.Opcode),
+		fpOpcode:     C.u8(info.FPOpcode),
+		realFpOpcode: C.u8(info.RealFPOpcode),
+		mergeOpcode:  C.u8(info.MergeOpcode),
+		param:        C.s32(info.Param),
+		fpParam:      C.s32(info.FPParam),
+		realFpParam:  C.s32(info.RealFPParam),
 	}
 	return impl.trackMapError(metrics.IDUnwindInfoArrayUpdate,
 		impl.unwindInfoArray.Update(unsafe.Pointer(&key), unsafe.Pointer(&value),

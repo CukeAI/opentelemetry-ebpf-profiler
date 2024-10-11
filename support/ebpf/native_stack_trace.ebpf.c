@@ -546,18 +546,13 @@ static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *st
   }
 
   // Try to resolve frame pointer
-  // simple heuristic for FP based frames
-  // the GCC compiler usually generates stack frame records in such a way,
-  // so that FP/RA pair is at the bottom of a stack frame (stack frame
-  // record at lower addresses is followed by stack vars at higher ones)
-  // this implies that if no other changes are applied to the stack such
-  // as alloca(), following the prolog SP/FP points to the frame record
-  // itself, in such a case FP offset will be equal to 8
-  if (info->fpParam == 8) {
+  // UNWIND_OPCODE_COMMAND means regSame in CIE
+  if (info->realFpOpcode != UNWIND_OPCODE_COMMAND) {
+    state->fp = unwind_register_address(state, cfa, info->realFpOpcode, info->realFpParam);
     // we can assume the presence of frame pointers
     if (info->fpOpcode != UNWIND_OPCODE_BASE_LR) {
       // FP precedes the RA on the stack (Aarch64 ABI requirement)
-      bpf_probe_read_user(&state->fp, sizeof(state->fp), (void *)(ra - 8));
+      bpf_probe_read_user(&state->fp, sizeof(state->fp), (void *)(state->fp));
     }
   }
 
