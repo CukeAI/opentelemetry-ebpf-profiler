@@ -363,13 +363,14 @@ func (pm *ProcessManager) processNewExecMapping(pr process.Process, mapping *pro
 
 	if err := pm.handleNewMapping(pr,
 		&Mapping{
-			FileID:     info.fileID,
-			Vaddr:      libpf.Address(mapping.Vaddr),
-			Bias:       mapping.Vaddr - elfSpaceVA,
-			Length:     mapping.Length,
-			Device:     mapping.Device,
-			Inode:      mapping.Inode,
-			FileOffset: mapping.FileOffset,
+			FileID:      info.fileID,
+			Vaddr:       libpf.Address(mapping.Vaddr),
+			Bias:        mapping.Vaddr - elfSpaceVA,
+			Length:      mapping.Length,
+			Device:      mapping.Device,
+			Inode:       mapping.Inode,
+			FileOffset:  mapping.FileOffset,
+			EmbedOffset: mapping.EmbedOffset,
 		}, elfRef); err != nil {
 		// Same as above, ignore the errors related to process having exited.
 		// Also ignore errors of deferred file IDs.

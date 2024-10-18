@@ -125,13 +125,17 @@ type Mapping struct {
 
 	// File offset of the backing file
 	FileOffset uint64
+
+	// Embed offset contains the file offset embedded in the apk file for Android
+	EmbedOffset uint64
 }
 
 // GetOnDiskFileIdentifier returns the OnDiskFileIdentifier for the mapping
 func (m *Mapping) GetOnDiskFileIdentifier() util.OnDiskFileIdentifier {
 	return util.OnDiskFileIdentifier{
-		DeviceID: m.Device,
-		InodeNum: m.Inode,
+		DeviceID:    m.Device,
+		InodeNum:    m.Inode,
+		EmbedOffset: m.EmbedOffset,
 	}
 }
 

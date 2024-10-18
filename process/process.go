@@ -229,6 +229,29 @@ func (m *memoryMappingFile) Close() error {
 	return nil
 }
 
+type embedMappingFile struct {
+	*io.SectionReader
+	f *os.File
+}
+
+func (em *embedMappingFile) Close() error {
+	if em.f != nil {
+		return em.f.Close()
+	}
+	return nil
+}
+
+func (sp *systemProcess) openEmbedMappingFile(path string, offset int64, length int64) (*embedMappingFile, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	s := io.NewSectionReader(f, offset, length)
+	return &embedMappingFile{
+		SectionReader: s,
+		f:             f}, nil
+}
+
 func (sp *systemProcess) OpenMappingFile(m *Mapping) (ReadAtCloser, error) {
 	if m.IsVDSO() {
 		vdso, err := sp.extractMapping(m)
@@ -241,7 +264,11 @@ func (sp *systemProcess) OpenMappingFile(m *Mapping) (ReadAtCloser, error) {
 	if filename == "" {
 		return nil, errors.New("no backing file for anonymous memory")
 	}
-	return os.Open(filename)
+	if m.IsEmbedElf() {
+		return sp.openEmbedMappingFile(filename, int64(m.EmbedOffset), int64(m.EmbedLength))
+	} else {
+		return os.Open(filename)
+	}
 }
 
 func (sp *systemProcess) GetMappingFileLastModified(m *Mapping) int64 {
