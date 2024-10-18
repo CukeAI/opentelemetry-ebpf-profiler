@@ -380,7 +380,7 @@ func (pm *ProcessManager) processNewExecMapping(pr process.Process, mapping *pro
 	}
 
 	// Get the virtual addresses for this mapping
-	elfSpaceVA, ok := info.addressMapper.FileOffsetToVirtualAddress(mapping.FileOffset)
+	elfSpaceVA, ok := info.addressMapper.FileOffsetToVirtualAddress(mapping.FileOffset - mapping.EmbedOffset)
 	if !ok {
 		log.Debugf("Failed to map file offset of PID %d, file %s, offset %d",
 			pr.PID(), mapping.Path, mapping.FileOffset)
@@ -389,13 +389,14 @@ func (pm *ProcessManager) processNewExecMapping(pr process.Process, mapping *pro
 
 	if err := pm.handleNewMapping(pr,
 		&Mapping{
-			FileID:     info.fileID,
-			Vaddr:      libpf.Address(mapping.Vaddr),
-			Bias:       mapping.Vaddr - elfSpaceVA,
-			Length:     mapping.Length,
-			Device:     mapping.Device,
-			Inode:      mapping.Inode,
-			FileOffset: mapping.FileOffset,
+			FileID:      info.fileID,
+			Vaddr:       libpf.Address(mapping.Vaddr),
+			Bias:        mapping.Vaddr - elfSpaceVA,
+			Length:      mapping.Length,
+			Device:      mapping.Device,
+			Inode:       mapping.Inode,
+			FileOffset:  mapping.FileOffset,
+			EmbedOffset: mapping.EmbedOffset,
 		}, elfRef); err != nil {
 		// Same as above, ignore the errors related to process having exited.
 		// Also ignore errors of deferred file IDs.

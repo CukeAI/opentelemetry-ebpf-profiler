@@ -18,6 +18,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/sys/unix"
 
+	"go.opentelemetry.io/ebpf-profiler/apkreader"
 	"go.opentelemetry.io/ebpf-profiler/libpf"
 	"go.opentelemetry.io/ebpf-profiler/libpf/pfelf"
 	"go.opentelemetry.io/ebpf-profiler/remotememory"
@@ -203,14 +204,26 @@ func parseMappings(mapsFile io.Reader) ([]Mapping, uint32, error) {
 			continue
 		}
 
+		var embedOffset uint64
+		var embedLength uint64
+		if (flags&elf.PF_X) != 0 && apkreader.IsApkPath(path) {
+			var embedName string
+			embedName, embedOffset, embedLength = apkreader.GetReader().TryGetApkEmbedElfInfo(path, fileOffset)
+			if embedLength > 0 {
+				path = embedName
+			}
+		}
+
 		mappings = append(mappings, Mapping{
-			Vaddr:      vaddr,
-			Length:     length,
-			Flags:      flags,
-			FileOffset: fileOffset,
-			Device:     device,
-			Inode:      inode,
-			Path:       path,
+			Vaddr:       vaddr,
+			Length:      length,
+			Flags:       flags,
+			FileOffset:  fileOffset,
+			Device:      device,
+			Inode:       inode,
+			Path:        path,
+			EmbedOffset: embedOffset,
+			EmbedLength: embedLength,
 		})
 	}
 	return mappings, numParseErrors, scanner.Err()
@@ -282,6 +295,29 @@ func (m *memoryMappingFile) Close() error {
 	return nil
 }
 
+type embedMappingFile struct {
+	*io.SectionReader
+	f *os.File
+}
+
+func (em *embedMappingFile) Close() error {
+	if em.f != nil {
+		return em.f.Close()
+	}
+	return nil
+}
+
+func (sp *systemProcess) openEmbedMappingFile(path string, offset int64, length int64) (*embedMappingFile, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	s := io.NewSectionReader(f, offset, length)
+	return &embedMappingFile{
+		SectionReader: s,
+		f:             f}, nil
+}
+
 func (sp *systemProcess) OpenMappingFile(m *Mapping) (ReadAtCloser, error) {
 	if m.IsVDSO() {
 		vdso, err := sp.extractMapping(m)
@@ -294,7 +330,11 @@ func (sp *systemProcess) OpenMappingFile(m *Mapping) (ReadAtCloser, error) {
 	if filename == "" {
 		return nil, errors.New("no backing file for anonymous memory")
 	}
-	return os.Open(filename)
+	if m.IsEmbedElf() {
+		return sp.openEmbedMappingFile(filename, int64(m.EmbedOffset), int64(m.EmbedLength))
+	} else {
+		return os.Open(filename)
+	}
 }
 
 func (sp *systemProcess) GetMappingFileLastModified(m *Mapping) int64 {
@@ -323,6 +363,14 @@ func (sp *systemProcess) CalculateMappingFileID(m *Mapping) (libpf.FileID, error
 		}
 		vdsoFileID, err = libpf.FileIDFromExecutableReader(vdso)
 		return vdsoFileID, err
+	} else if m.IsEmbedElf() {
+		filename := sp.getMappingFile(m)
+		f, err := sp.openEmbedMappingFile(filename, int64(m.EmbedOffset), int64(m.EmbedLength))
+		defer f.Close()
+		if err != nil {
+			return libpf.FileID{}, fmt.Errorf("failed to extract embeded file :%v", err)
+		}
+		return libpf.FileIDFromExecutableReader(f)
 	}
 	return libpf.FileIDFromExecutableFile(sp.getMappingFile(m))
 }
@@ -340,6 +388,13 @@ func (sp *systemProcess) OpenELF(file string) (*pfelf.File, error) {
 				return nil, fmt.Errorf("failed to extract VDSO: %v", err)
 			}
 			return pfelf.NewFile(vdso, 0, false)
+		} else if m.IsEmbedElf() {
+			filename := sp.getMappingFile(m)
+			f, err := sp.openEmbedMappingFile(filename, int64(m.EmbedOffset), int64(m.EmbedLength))
+			if err != nil {
+				return nil, fmt.Errorf("failed to open embeded file :%v", err)
+			}
+			return pfelf.NewFile(f, 0, false)
 		}
 		return pfelf.Open(sp.getMappingFile(m))
 	}

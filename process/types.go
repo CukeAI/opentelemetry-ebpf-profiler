@@ -38,6 +38,10 @@ type Mapping struct {
 	Inode uint64
 	// Path contains the file name for file backed mappings
 	Path string
+	// Embed offset contains the file offset embedded in the apk file for Android
+	EmbedOffset uint64
+	// Embed Length contains the file length embedded in the apk file for Android
+	EmbedLength uint64
 }
 
 func (m *Mapping) IsExecutable() bool {
@@ -58,9 +62,14 @@ func (m *Mapping) IsVDSO() bool {
 
 func (m *Mapping) GetOnDiskFileIdentifier() util.OnDiskFileIdentifier {
 	return util.OnDiskFileIdentifier{
-		DeviceID: m.Device,
-		InodeNum: m.Inode,
+		DeviceID:    m.Device,
+		InodeNum:    m.Inode,
+		EmbedOffset: m.EmbedOffset,
 	}
+}
+
+func (m *Mapping) IsEmbedElf() bool {
+	return m.EmbedLength > 0
 }
 
 // ThreadInfo contains the information about a thread CPU state needed for unwinding

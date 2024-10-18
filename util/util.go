@@ -72,10 +72,11 @@ type Range struct {
 // It is a structure to identify a particular file on disk by
 // deviceID and inode number.
 type OnDiskFileIdentifier struct {
-	DeviceID uint64 // dev_t as reported by stat.
-	InodeNum uint64 // ino_t should fit into 64 bits
+	DeviceID    uint64 // dev_t as reported by stat.
+	InodeNum    uint64 // ino_t should fit into 64 bits
+	EmbedOffset uint64 // Embedded offset of the file for Android APK.
 }
 
 func (odfi OnDiskFileIdentifier) Hash32() uint32 {
-	return uint32(hash.Uint64(odfi.InodeNum) + odfi.DeviceID)
+	return uint32(hash.Uint64(odfi.InodeNum) + odfi.DeviceID + hash.Uint64(odfi.EmbedOffset))
 }
