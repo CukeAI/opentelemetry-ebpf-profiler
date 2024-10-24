@@ -446,6 +446,27 @@ frame_ok:
   return ERR_OK;
 }
 #elif defined(__aarch64__)
+static ErrorCode unwind_one_frame_fallback(u64 pid, u32 frame_idx, UnwindState *state, bool* stop) {
+  DEBUG_PRINT("Fallback to fp-based unwinder");
+  u64 sp, pc, fp;
+  sp = state->fp;
+  bpf_probe_read_user(&pc, sizeof(state->fp), (void*)(state->fp + 8));
+  bpf_probe_read_user(&fp, sizeof(state->pc), (void*)(state->fp));
+
+	// Frame pointers should strictly progress back up the stack
+	// towards higher addresses.
+  if (fp >= state->fp) {
+    *stop = true;
+    return ERR_OK;
+  }
+
+  state->pc = normalize_pac_ptr(pc);
+  state->sp = sp;
+  state->fp = fp;
+  state->return_address = true;
+  return ERR_OK;
+}
+
 static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *state, bool *stop)
 {
   *stop = false;
@@ -459,7 +480,7 @@ static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *st
   // stack deltas need to be retrieved from the relevant map.
   ErrorCode error = get_stack_delta(state, &addrDiff, &unwindInfo);
   if (error) {
-    return error;
+    return unwind_one_frame_fallback(pid, frame_idx, state, stop);
   }
 
   if (unwindInfo & STACK_DELTA_COMMAND_FLAG) {
