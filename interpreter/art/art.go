@@ -70,6 +70,13 @@ func Loader(ebpf interpreter.EbpfHandler, info *interpreter.LoaderInfo) (interpr
 		return nil, err
 	}
 
+	log.Debugf("ART load dexfile support library\n")
+	err = TryLoadDexFileSupportLib(path.Dir(info.FileName()))
+	if err != nil {
+		log.Errorf("%v", err)
+		return nil, err
+	}
+
 	jit_desc_addr, err := findSymbol(ef, "__jit_debug_descriptor")
 	if err != nil {
 		log.Errorf("%v", err)

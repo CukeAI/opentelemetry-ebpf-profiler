@@ -45,8 +45,8 @@ type artInstance struct {
 	last_jit_desc *JitDescriptor
 	last_dex_desc *JitDescriptor
 
-	dexDebugInfo []DexDebugInfo
-	mappings     []process.Mapping
+	dexFiles map[uint64][]*DexFile
+	mappings []process.Mapping
 
 	newJitDebugInfo map[host.FileID]*JitDebugInfo
 	oldJitDebugInfo map[host.FileID]*JitDebugInfo
@@ -309,19 +309,18 @@ func inRegion(addr, length, start, end uint64) bool {
 type DexDebugInfo struct {
 	dex_file_path string
 	dex_offset    uint64
-	mapping       process.Mapping
+	dex_size      uint64
+	mapping       *process.Mapping
 }
 
-func (ai *artInstance) readDexDebugInfo(new_desc *JitDescriptor, mappings []process.Mapping) ([]DexDebugInfo, error) {
-	//read_entry_limit := (new_desc.action_seqlock - old_desc.action_seqlock) / 2
-	//entries, err := ai.readNewCodeEntries(new_desc, old_desc.action_timestamp, read_entry_limit)
-	read_entry_limit := new_desc.action_seqlock / 2
-	entries, err := ai.readNewCodeEntries(new_desc, 0, read_entry_limit)
+func (ai *artInstance) updateDexDebugInfo(new_desc *JitDescriptor, old_desc *JitDescriptor, mappings []process.Mapping) error {
+	read_entry_limit := (new_desc.action_seqlock - old_desc.action_seqlock) / 2
+	entries, err := ai.readNewCodeEntries(new_desc, old_desc.action_timestamp, read_entry_limit)
+	//read_entry_limit := new_desc.action_seqlock / 2
+	//entries, err := ai.readNewCodeEntries(new_desc, 0, read_entry_limit)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	var dinfo []DexDebugInfo
 
 	for _, entry := range entries {
 		var found_mapping *process.Mapping
@@ -345,16 +344,24 @@ func (ai *artInstance) readDexDebugInfo(new_desc *JitDescriptor, mappings []proc
 
 		if found_mapping != nil {
 			//log.Debugf("found entry:%0x, mapping:0x%x, %s", entry.symfile_addr, found_mapping.Vaddr, found_mapping.Path)
-			dinfo = append(dinfo, DexDebugInfo{
-				dex_file_path: found_mapping.Path,
-				dex_offset:    entry.symfile_addr - found_mapping.Vaddr,
-				mapping:       *found_mapping,
-			})
+			dexFile, err := NewDexFile(
+				entry.symfile_addr-found_mapping.Vaddr,
+				entry.symfile_size,
+				found_mapping.Path,
+				found_mapping,
+				&ai.rm)
+			if err != nil {
+				log.Warnf("fail to get dex file: %s", err)
+				continue
+			}
+			//dexFile.PrintAllSymbols()
+			// Update dexFiles map
+			ai.dexFiles[found_mapping.Vaddr] = append(ai.dexFiles[found_mapping.Vaddr], dexFile)
 		} else {
 			log.Warnf("fail to find dex file for entry:%0x", entry.symfile_addr)
 		}
 	}
-	return dinfo, nil
+	return nil
 }
 
 func (ai *artInstance) addJitRegion(ebpf interpreter.EbpfHandler, pid libpf.PID,
@@ -470,6 +477,12 @@ func (ai *artInstance) SynchronizeMappings(ebpf interpreter.EbpfHandler,
 		return nil
 	}
 
+	log.Infof("Update dex debug info by desc for pid: %v", pr.PID())
+	err = ai.updateDexDebugInfo(dex_desc, ai.last_dex_desc, mappings)
+	if err != nil {
+		return err
+	}
+
 	log.Debugf("Update jit debug info by desc for pid: %v", pr.PID())
 	jitRegions, err := ai.readJitDebugInfo(jit_desc)
 	if err != nil {
@@ -489,13 +502,6 @@ func (ai *artInstance) SynchronizeMappings(ebpf interpreter.EbpfHandler,
 	}
 	ai.oldJitRegions = jitRegions
 
-	log.Debugf("Update dex debug info by desc for pid: %v", pr.PID())
-	dex_dinfo, err := ai.readDexDebugInfo(dex_desc, mappings)
-	if err != nil {
-		return err
-	}
-
-	ai.dexDebugInfo = dex_dinfo
 	ai.mappings = mappings
 
 	ai.last_jit_desc = jit_desc
@@ -505,12 +511,6 @@ func (ai *artInstance) SynchronizeMappings(ebpf interpreter.EbpfHandler,
 	log.Debugf("dex_desc_version: %v", dex_desc.DebugString())
 
 	return nil
-}
-
-type DexSymbol struct {
-	FilePath string
-	Offset   uint64
-	Name     string
 }
 
 func (ai *artInstance) findJitSymbol(pc uint64, fileID host.FileID) (DexSymbol, error) {
@@ -528,16 +528,41 @@ func (ai *artInstance) findJitSymbol(pc uint64, fileID host.FileID) (DexSymbol, 
 }
 
 func (ai *artInstance) findDexSymbol(dex_pc uint64) (DexSymbol, error) {
+	log.Tracef("try find symbol for dex_pc", dex_pc)
+	var symbol *DexSymbol
+	var err error
 	for _, mapping := range ai.mappings {
 		if uint64(dex_pc) >= mapping.Vaddr && uint64(dex_pc) < mapping.Vaddr+mapping.Length {
-			log.Tracef("found dex symbol for dex_pc: %#x, dex_file:%v", dex_pc, mapping.Path)
-			return DexSymbol{
-				FilePath: mapping.Path,
-				Offset:   dex_pc - mapping.Vaddr,
-			}, nil
+			dexFiles, exists := ai.dexFiles[mapping.Vaddr]
+			if exists {
+				for _, dexFile := range dexFiles {
+					symbol, err = dexFile.FindSymbol(dex_pc - mapping.Vaddr - dexFile.offset)
+					if err == nil {
+						break
+					} else {
+						symbol = nil
+					}
+				}
+			}
+
+			if symbol != nil {
+				log.Infof("found symbol for dex_pc: %#x, name:%v", dex_pc, symbol.Name)
+				return *symbol, nil
+			} else {
+				log.Infof("found mapping for dex_pc: %#x, file:%v", dex_pc, mapping.Path)
+				return DexSymbol{
+					FilePath: mapping.Path,
+					Offset:   dex_pc - mapping.Vaddr,
+					Name:     "",
+				}, nil
+			}
 		}
 	}
-	return DexSymbol{}, fmt.Errorf("not found dex symbol for dex_pc: %#x", dex_pc)
+	return DexSymbol{
+		FilePath: "unknown",
+		Offset:   dex_pc,
+		Name:     "",
+	}, fmt.Errorf("not found mapping for dex_pc: %#x", dex_pc)
 }
 
 func (ai *artInstance) Symbolize(symbolReporter reporter.SymbolReporter,

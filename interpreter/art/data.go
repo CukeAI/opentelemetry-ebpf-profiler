@@ -103,6 +103,7 @@ func (d *artData) Attach(ebpf interpreter.EbpfHandler, pid libpf.PID, bias libpf
 		last_dex_desc:   &JitDescriptor{},
 		newJitDebugInfo: make(map[host.FileID]*JitDebugInfo),
 		oldJitDebugInfo: make(map[host.FileID]*JitDebugInfo),
+		dexFiles:        make(map[uint64][]*DexFile),
 	}, nil
 }
 
