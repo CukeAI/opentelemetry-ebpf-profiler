@@ -53,6 +53,8 @@ const (
 	AbortFrame FrameType = support.FrameMarkerAbort
 	// LuaJITFrame identifies the LuaJIT interpreter frames.
 	LuaJITFrame FrameType = support.FrameMarkerLuaJIT
+	// ARTFrame identifies the ART interpreter frames.
+	ARTFrame FrameType = support.FrameMarkerART
 )
 
 const (

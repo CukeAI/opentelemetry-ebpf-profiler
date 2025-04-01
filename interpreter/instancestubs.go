@@ -33,3 +33,7 @@ func (is *InstanceStubs) Symbolize(reporter.SymbolReporter, *host.Frame, *libpf.
 func (is *InstanceStubs) GetAndResetMetrics() ([]metrics.Metric, error) {
 	return []metrics.Metric{}, nil
 }
+
+func (i *InstanceStubs) GetAndResetJitDebugELFs() ([]ElfBundle, []ElfBundle, error) {
+	return []ElfBundle{}, []ElfBundle{}, nil
+}

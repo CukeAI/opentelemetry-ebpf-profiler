@@ -56,6 +56,7 @@ int bpf_log(const char *fmt, ...)
 #include "../../support/ebpf/system_config.ebpf.c"
 #include "../../support/ebpf/luajit_tracer.ebpf.c"
 #include "../../support/ebpf/go_labels.ebpf.c"
+#include "../../support/ebpf/art_tracer.ebpf.c"
 
 int unwind_traces(u64 id, int debug, u64 tp_base, void *ctx)
 {
@@ -124,6 +125,9 @@ int bpf_tail_call(void *ctx, bpf_map_def *map, int index)
 		break;
     case PROG_GO_LABELS:
 		rc = perf_go_labels(ctx);
+		break;
+	case PROG_UNWIND_ART:
+		rc = unwind_art(ctx);
 		break;
 	default:
 		return -1;

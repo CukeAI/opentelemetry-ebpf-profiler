@@ -106,6 +106,7 @@ type ebpfMapsImpl struct {
 	goProcs            *cebpf.Map
 	clProcs            *cebpf.Map
 	luajitProcs        *cebpf.Map
+	artProcs           *cebpf.Map
 
 	// Stackdelta and process related eBPF maps
 	exeIDToStackDeltaMaps []*cebpf.Map
@@ -226,6 +227,12 @@ func LoadMaps(ctx context.Context, maps map[string]*cebpf.Map) (EbpfHandler, err
 	}
 	impl.luajitProcs = luajitProcs
 
+	artProcs, ok := maps["art_procs"]
+	if !ok {
+		log.Fatalf("Map art_procs is not available")
+	}
+	impl.artProcs = artProcs
+
 	impl.stackDeltaPageToInfo, ok = maps["stack_delta_page_to_info"]
 	if !ok {
 		log.Fatalf("Map stack_delta_page_to_info is not available")
@@ -327,6 +334,8 @@ func (impl *ebpfMapsImpl) getInterpreterTypeMap(typ libpf.InterpreterType) (*ceb
 		return impl.clProcs, nil
 	case libpf.LuaJIT:
 		return impl.luajitProcs, nil
+	case libpf.ART:
+		return impl.artProcs, nil
 	default:
 		return nil, fmt.Errorf("type %d is not (yet) supported", typ)
 	}
@@ -587,13 +596,19 @@ func (impl *ebpfMapsImpl) UpdateUnwindInfo(index uint16, info sdtypes.UnwindInfo
 
 	key := C.u32(index)
 	value := C.UnwindInfo{
-		opcode:       C.u8(info.Opcode),
-		fpOpcode:     C.u8(info.FPOpcode),
-		realFpOpcode: C.u8(info.RealFPOpcode),
-		mergeOpcode:  C.u8(info.MergeOpcode),
-		param:        C.s32(info.Param),
-		fpParam:      C.s32(info.FPParam),
-		realFpParam:  C.s32(info.RealFPParam),
+		opcode:         C.u8(info.Opcode),
+		fpOpcode:       C.u8(info.FPOpcode),
+		realFpOpcode:   C.u8(info.RealFPOpcode),
+		archdefOpcode:  C.u8(info.ArchDefOpcode),
+		archdef1Opcode: C.u8(info.ArchDef1Opcode),
+		archdef2Opcode: C.u8(info.ArchDef2Opcode),
+		mergeOpcode:    C.u8(info.MergeOpcode),
+		param:          C.s32(info.Param),
+		fpParam:        C.s32(info.FPParam),
+		realFpParam:    C.s32(info.RealFPParam),
+		archdefParam:   C.s32(info.ArchDefParam),
+		archdef1Param:  C.s32(info.ArchDef1Param),
+		archdef2Param:  C.s32(info.ArchDef2Param),
 	}
 	return impl.trackMapError(metrics.IDUnwindInfoArrayUpdate,
 		impl.unwindInfoArray.Update(unsafe.Pointer(&key), unsafe.Pointer(&value),

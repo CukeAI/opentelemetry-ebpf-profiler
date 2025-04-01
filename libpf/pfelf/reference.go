@@ -23,6 +23,10 @@ func NewReference(fileName string, elfOpener ELFOpener) *Reference {
 	return &Reference{fileName: fileName, ELFOpener: elfOpener}
 }
 
+func NewOpenedReference(fileName string, elfFile *File) *Reference {
+	return &Reference{fileName: fileName, elfFile: elfFile, ELFOpener: SystemOpener}
+}
+
 // FileName returns the file name associated with this Reference
 func (ref *Reference) FileName() string {
 	return ref.fileName

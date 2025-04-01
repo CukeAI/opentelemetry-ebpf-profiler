@@ -11,6 +11,7 @@ import (
 	"debug/elf"
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	sdtypes "go.opentelemetry.io/ebpf-profiler/nativeunwind/stackdeltatypes"
 )
 
@@ -52,15 +53,20 @@ const (
 	armRegPC  uleb128 = 32
 
 	armLastReg uleb128 = iota
+	armDexPc   uleb128 = 128 // a fake register for Android dex_pc
+
 )
 
 // newVMRegsARM initializes the vmRegs structure for aarch64.
 func newVMRegsARM() vmRegs {
 	return vmRegs{
-		arch: elf.EM_AARCH64,
-		cfa:  vmReg{arch: elf.EM_AARCH64, reg: regUndefined},
-		fp:   vmReg{arch: elf.EM_AARCH64, reg: regSame},
-		ra:   vmReg{arch: elf.EM_AARCH64, reg: regSame},
+		arch:     elf.EM_AARCH64,
+		cfa:      vmReg{arch: elf.EM_AARCH64, reg: regUndefined},
+		fp:       vmReg{arch: elf.EM_AARCH64, reg: regSame},
+		ra:       vmReg{arch: elf.EM_AARCH64, reg: regSame},
+		archdef:  vmReg{arch: elf.EM_AARCH64, reg: regSame},
+		archdef1: vmReg{arch: elf.EM_AARCH64, reg: regSame},
+		archdef2: vmReg{arch: elf.EM_AARCH64, reg: regUndefined},
 	}
 }
 
@@ -75,6 +81,8 @@ func getRegNameARM(reg uleb128) string {
 		return "sp"
 	case armRegPC:
 		return "pc"
+	case armDexPc:
+		return "dex_pc"
 	default:
 		if reg < armLastReg {
 			return fmt.Sprintf("x%d", reg)
@@ -90,6 +98,12 @@ func (regs *vmRegs) regARM(ndx uleb128) *vmReg {
 		return &regs.fp
 	case armRegLR:
 		return &regs.ra
+	case armRegX25:
+		return &regs.archdef
+	case armRegX22:
+		return &regs.archdef1
+	case armDexPc:
+		return &regs.archdef2
 	default:
 		return nil
 	}
@@ -127,6 +141,21 @@ func (regs *vmRegs) getUnwindInfoARM() sdtypes.UnwindInfo {
 	case armRegSP:
 		info.Opcode = sdtypes.UnwindOpcodeBaseSP
 		info.Param = int32(regs.cfa.off)
+	case regExprRegDeref:
+		// In libart sometimes CFA is restored by X25.
+		// TODO: Only support X25 based CFA expressions because we can only pass
+		// 2 16-bit parameters(off, off2) via info.Param. As soon as info.Param is
+		// extended to 64-bit, we can support more common registers.
+		reg, _, off, off2 := splitOff(regs.cfa.off)
+		if param, ok := sdtypes.PackDerefParam(int32(off), int32(off2)); ok {
+			switch uleb128(reg) {
+			case armRegX25:
+				info.Opcode = sdtypes.UnwindOpcodeBaseReg | sdtypes.UnwindOpcodeFlagDeref
+				info.Param = param
+			}
+		}
+	default:
+		log.Debugf("CFA based on unknown reg: %d", regs.cfa.reg)
 	}
 
 	// Determine unwind info for return address
@@ -161,6 +190,8 @@ func (regs *vmRegs) getUnwindInfoARM() sdtypes.UnwindInfo {
 			// CFA offset needs to be added to the one denoting RA location.
 			info.FPParam = int32(regs.cfa.off) + int32(regs.ra.off)
 		}
+	default:
+		log.Debugf("RA based on unknown reg: %d", regs.ra.reg)
 	}
 	switch regs.fp.reg {
 	case regCFA:
@@ -176,6 +207,66 @@ func (regs *vmRegs) getUnwindInfoARM() sdtypes.UnwindInfo {
 			info.RealFPOpcode = sdtypes.UnwindOpcodeBaseFP
 			info.RealFPParam = int32(offrbp)
 		}
+	default:
+		log.Debugf("FP based on unknown reg: %d", regs.fp.reg)
 	}
+
+	// archdef is used to restore X25, which is used to restore special cfa
+	// that based on X25 in libart in Android.
+	switch regs.archdef.reg {
+	case regCFA:
+		info.ArchDefOpcode = sdtypes.UnwindOpcodeBaseCFA
+		info.ArchDefParam = int32(regs.archdef.off)
+	case regSame:
+		info.ArchDefOpcode = sdtypes.UnwindOpcodeCommand
+		info.ArchDefParam = 0
+	case regExprReg:
+		if r, _, offrbp, _ := splitOff(regs.fp.off); uleb128(r) == armRegFP {
+			info.ArchDefOpcode = sdtypes.UnwindOpcodeBaseFP
+			info.ArchDefParam = int32(offrbp)
+		} else {
+			log.Debugf("X25 based on unknown expr: r=%d, offrbp=%d", r, offrbp)
+		}
+	default:
+		log.Debugf("X25 based on unknown reg: %d", regs.archdef.reg)
+	}
+
+	// TODO: X22 is only used to restore dex_pc, in which case X22 is always CFA - 72.
+	// can we remove unwind info for it?
+	switch regs.archdef1.reg {
+	case regCFA:
+		info.ArchDef1Opcode = sdtypes.UnwindOpcodeBaseCFA
+		info.ArchDef1Param = int32(regs.archdef1.off)
+	case regSame:
+		info.ArchDef1Opcode = sdtypes.UnwindOpcodeCommand
+		info.ArchDef1Param = 0
+	case regExprReg:
+		if r, _, offrbp, _ := splitOff(regs.fp.off); uleb128(r) == armRegFP {
+			info.ArchDef1Opcode = sdtypes.UnwindOpcodeBaseFP
+			info.ArchDef1Param = int32(offrbp)
+		} else {
+			log.Debugf("X22 based on unknown expr: r=%d, offrbp=%d", r, offrbp)
+		}
+	default:
+		log.Debugf("X22 based on unknown reg: %d", regs.archdef1.reg)
+	}
+
+	switch regs.archdef2.reg {
+	// In Android a special dwarf vexpr is used to indicate that pc is stored in
+	// dex_pc(typically X22 for ARM64). FP is used to pass these information to ebpf.
+	case regExprDexPc:
+		_, _, r, offrbp := splitOff(regs.archdef2.off)
+		if offrbp != 0 {
+			log.Debugf("unsupported Expr Dex Pc offset: %d", offrbp)
+		}
+		info.ArchDef2Opcode = sdtypes.UnwindOpcodeBaseDexPc
+		info.ArchDef2Param = int32(r)
+	case regUndefined:
+		info.ArchDef2Opcode = 0
+		info.ArchDef2Param = 0
+	default:
+		log.Debugf("DexPC based on unknown reg: %d", regs.archdef2.reg)
+	}
+
 	return info
 }

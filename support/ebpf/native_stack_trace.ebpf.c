@@ -263,8 +263,8 @@ unwind_register_address(UnwindState *state, u64 cfa, u8 opcode, s32 param)
   if (opcode & UNWIND_OPCODEF_DEREF) {
     // For expressions that dereference the base expression, the parameter is constructed
     // of pre-dereference and post-derefence operands. Unpack those.
-    preDeref &= ~UNWIND_DEREF_MASK;
-    postDeref = (param & UNWIND_DEREF_MASK) * UNWIND_DEREF_MULTIPLIER;
+    preDeref = (param & ~UNWIND_DEREF_MASK) / UNWIND_DEREF_MULTIPLIER;
+    postDeref = param & UNWIND_DEREF_MASK;
   }
 
   // Resolve the 'BASE' register, and fetch the CFA/FP/SP value.
@@ -283,6 +283,9 @@ unwind_register_address(UnwindState *state, u64 cfa, u8 opcode, s32 param)
     }
 
     return state->lr;
+  case UNWIND_OPCODE_BASE_REG:
+    addr = state->r25;
+    break;
 #endif
 #if defined(__x86_64__)
   case UNWIND_OPCODE_BASE_REG:
@@ -305,7 +308,9 @@ unwind_register_address(UnwindState *state, u64 cfa, u8 opcode, s32 param)
     }
     return addr + val;
 #endif
-  default: return 0;
+  default:
+    DEBUG_PRINT("unsupported unwind opcode: 0x%x", opcode);
+    return 0;
   }
 
 #ifdef OPTI_DEBUG
@@ -322,6 +327,11 @@ unwind_register_address(UnwindState *state, u64 cfa, u8 opcode, s32 param)
   case UNWIND_OPCODE_BASE_SP | UNWIND_OPCODEF_DEREF:
     DEBUG_PRINT("unwind: *(sp+%d)+%d", preDeref, postDeref);
     break;
+#if defined(__aarch64__)
+  case UNWIND_OPCODE_BASE_REG | UNWIND_OPCODEF_DEREF:
+    DEBUG_PRINT("unwind: *(r25+%d)+%d", preDeref, postDeref);
+    break;
+#endif
   }
 #endif
 
@@ -502,6 +512,7 @@ static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *st
       state->lr             = normalize_pac_ptr(rt_regs[30]);
       state->r7             = rt_regs[7];
       state->r22            = rt_regs[22];
+      state->r25            = rt_regs[25];
       state->r28            = rt_regs[28];
       state->return_address = false;
       state->lr_invalid     = false;
@@ -565,6 +576,20 @@ static ErrorCode unwind_one_frame(u64 pid, u32 frame_idx, struct UnwindState *st
     DEBUG_PRINT("Giving up due to failure to resolve RA");
     return ERR_NATIVE_PC_READ;
   }
+
+  // Try to resolve r25 for ART unwinder
+  if (info->archdefOpcode != UNWIND_OPCODE_COMMAND) {
+    state->r25 = unwind_register_address(state, cfa, info->archdefOpcode, info->archdefParam);
+    bpf_probe_read_user(&state->r25, sizeof(state->r25), (void*)(state->r25));
+  }
+  DEBUG_PRINT("r25: 0x%llx", (u64)state->r25);
+
+  // Try to resolve r22 for ART unwinder
+  if (info->archdef1Opcode != UNWIND_OPCODE_COMMAND) {
+    state->r22 = unwind_register_address(state, cfa, info->archdef1Opcode, info->archdef1Param);
+    bpf_probe_read_user(&state->r22, sizeof(state->r22), (void*)(state->r22));
+  }
+  DEBUG_PRINT("r22: 0x%llx", (u64)state->r22);
 
   // Try to resolve frame pointer
   // UNWIND_OPCODE_COMMAND means regSame in CIE

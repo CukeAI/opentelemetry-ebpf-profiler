@@ -9,6 +9,7 @@ import (
 
 	"go.opentelemetry.io/ebpf-profiler/host"
 	"go.opentelemetry.io/ebpf-profiler/libpf"
+	"go.opentelemetry.io/ebpf-profiler/libpf/pfelf"
 	"go.opentelemetry.io/ebpf-profiler/lpm"
 	"go.opentelemetry.io/ebpf-profiler/metrics"
 	"go.opentelemetry.io/ebpf-profiler/process"
@@ -127,6 +128,11 @@ type Data interface {
 		Instance, error)
 }
 
+type ElfBundle struct {
+	FileID host.FileID
+	ElfRef *pfelf.Reference
+}
+
 // Instance is the interface to operate on per-PID data.
 type Instance interface {
 	// Detach removes any information from the ebpf maps. The pid is given as argument so
@@ -152,4 +158,8 @@ type Instance interface {
 	// GetAndResetMetrics collects the metrics from the Instance and resets
 	// the counters to their initial value.
 	GetAndResetMetrics() ([]metrics.Metric, error)
+
+	// GetAndResetJitDebugElfs collects the JIT debug ELF files from memory that
+	// help unwinding.
+	GetAndResetJitDebugELFs() ([]ElfBundle, []ElfBundle, error)
 }

@@ -340,6 +340,48 @@ enum {
   // number of failures in context pointer validity check
   metricID_UnwindLuaJITErrLMismatch,
 
+  // number of attempts to unwind ART
+  metricID_UnwindArtAttempts,
+
+  // number of unwound ART frames
+  metricID_UnwindArtFrames,
+
+  // number of failures to read ART proc info
+  metricID_UnwindArtErrNoProcInfo,
+
+  // number of failures to resolve CFA
+  metricID_UnwindArtBadCFA,
+
+  // number of failures to read PC from stack
+  metricID_UnwindArtErrPCRead,
+
+  // number of art unwinds successfully ending with a stop delta
+  metricID_UnwindArtStackDeltaStop,
+
+  // number of failures to look up ranges for text section in get_stack_delta()
+  metricID_UnwindArtErrLookupTextSection,
+
+  // number of failed range searches within 20 steps in get_stack_delta()
+  metricID_UnwindArtErrLookupIterations,
+
+  // number of failures to get StackUnwindInfo from stack delta map in get_stack_delta()
+  metricID_UnwindArtErrLookupRange,
+
+  // number of times that a lookup of a inner map for stack deltas failed
+  metricID_UnwindArtErrLookupStackDeltaInnerMap,
+
+  // number of times that a lookup of the outer map for stack deltas failed
+  metricID_UnwindArtErrLookupStackDeltaOuterMap,
+
+  // number of invalid stack deltas in the art unwinder
+  metricID_UnwindArtErrStackDeltaInvalid,
+
+  // number of times frame unwinding failed because of LR == 0
+  metricID_UnwindArtLr0,
+
+  // number of times an unwind_info_array index was invalid
+  metricID_UnwindArtErrBadUnwindInfoIndex,
+
   //
   // Metric IDs above are for counters (cumulative values)
   //
@@ -369,6 +411,7 @@ typedef enum TracePrograms {
   PROG_UNWIND_DOTNET,
   PROG_GO_LABELS,
   PROG_UNWIND_LUAJIT,
+  PROG_UNWIND_ART,
   NUM_TRACER_PROGS,
 } TracePrograms;
 
@@ -540,6 +583,10 @@ typedef struct LuaJITProcInfo {
   u16 cframe_size_jit;
 } LuaJITProcInfo;
 
+typedef struct ArtProcInfo {
+  FileID interpreter;
+} ArtProcInfo;
+
 // COMM_LEN defines the maximum length we will receive for the comm of a task.
 #define COMM_LEN 16
 
@@ -659,7 +706,7 @@ typedef struct UnwindState {
   u64 rax, r9, r11, r13, r14, r15;
 #elif defined(__aarch64__)
   // Current register values for named registers
-  u64 lr, r7, r22, r28;
+  u64 lr, r7, r22, r25, r28;
 #endif
 
   // The executable ID/hash associated with PC
@@ -898,10 +945,16 @@ typedef struct UnwindInfo {
   u8 opcode;      // main opcode to unwind CFA
   u8 fpOpcode;    // opcode to unwind FP
   u8 realFpOpcode; // opcode to unwind realFp
+  u8 archdefOpcode; // opcode to unwind archdef
+  u8 archdef1Opcode; // opcode to unwind archdef
+  u8 archdef2Opcode; // opcode to unwind archdef
   u8 mergeOpcode; // opcode for generating next stack delta, see below
   s32 param;      // parameter for the CFA expression
   s32 fpParam;    // parameter for the FP expression
   s32 realFpParam; // parameter for the FP expression, real frame pointer
+  s32 archdefParam; // parameter for the archdef expression
+  s32 archdef1Param; // parameter for the archdef expression
+  s32 archdef2Param; // parameter for the archdef expression
 } UnwindInfo;
 
 // The 8-bit mergeOpcode consists of two separate fields:

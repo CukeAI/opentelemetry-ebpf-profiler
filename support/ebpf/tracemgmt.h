@@ -217,6 +217,7 @@ static inline PerCPURecord *get_pristine_per_cpu_record()
   record->state.r7         = 0;
   record->state.r22        = 0;
   record->state.lr_invalid = false;
+  record->state.r25        = 0;
   record->state.r28        = 0;
 #endif
   record->state.return_address             = false;
@@ -601,6 +602,7 @@ copy_state_regs(UnwindState *state, struct pt_regs *regs, bool interrupted_kerne
   state->lr  = normalize_pac_ptr(regs->regs[30]);
   state->r7  = regs->regs[7];
   state->r22 = regs->regs[22];
+  state->r25 = regs->regs[25];
   state->r28 = regs->regs[28];
 
   // Treat syscalls as return addresses, but not IRQ handling, page faults, etc..

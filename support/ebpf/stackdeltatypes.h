@@ -13,6 +13,8 @@
 #define UNWIND_OPCODE_BASE_LR  0x04
 // Expression with base value being a Generic Register
 #define UNWIND_OPCODE_BASE_REG 0x05
+// Expression with base value being Dex Pc Register (ARM64)
+#define UNWIND_OPCODE_BASE_DEX_PC 0x06
 // An opcode flag to indicate that the value should be dereferenced
 #define UNWIND_OPCODEF_DEREF   0x80
 
@@ -29,11 +31,11 @@
 // as second adder as post-deref operation. This contains the mask for that.
 // This assumes that stack and CFA are aligned to register size, so that the
 // lowest bits of the offsets are always unset.
-#define UNWIND_DEREF_MASK 7
+#define UNWIND_DEREF_MASK 65535
 
 // The argument after dereference is multiplied by this to allow some range.
 // This assumes register size offsets are used.
-#define UNWIND_DEREF_MULTIPLIER 8
+#define UNWIND_DEREF_MULTIPLIER 65536
 
 // For the UNWIND_OPCODE_BASE_REG, the bitmask reserved for the register
 // number. Remaining bits are the offset.

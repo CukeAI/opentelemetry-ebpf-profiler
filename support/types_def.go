@@ -40,6 +40,7 @@ const (
 	ProgUnwindDotnet  = C.PROG_UNWIND_DOTNET
 	ProgGoLabels      = C.PROG_GO_LABELS
 	ProgUnwindLuaJIT  = C.PROG_UNWIND_LUAJIT
+	ProgUnwindArt     = C.PROG_UNWIND_ART
 )
 
 const (
