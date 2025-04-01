@@ -77,6 +77,8 @@ func (emc *ebpfMapsCoredump) UpdateProcData(t libpf.InterpreterType, pid libpf.P
 		emc.ctx.addMap(&C.v8_procs, C.u32(pid), sliceBuffer(ptr, C.sizeof_V8ProcInfo))
 	case libpf.LuaJIT:
 		emc.ctx.addMap(&C.luajit_procs, C.u32(pid), sliceBuffer(ptr, C.sizeof_LuaJITProcInfo))
+	case libpf.ART:
+		emc.ctx.addMap(&C.art_procs, C.u32(pid), sliceBuffer(ptr, C.sizeof_ArtProcInfo))
 	}
 	return nil
 }
@@ -99,6 +101,8 @@ func (emc *ebpfMapsCoredump) DeleteProcData(t libpf.InterpreterType, pid libpf.P
 		emc.ctx.delMap(&C.v8_procs, C.u32(pid))
 	case libpf.LuaJIT:
 		emc.ctx.delMap(&C.luajit_procs, C.u32(pid))
+	case libpf.ART:
+		emc.ctx.delMap(&C.art_procs, C.u32(pid))
 	}
 	return nil
 }

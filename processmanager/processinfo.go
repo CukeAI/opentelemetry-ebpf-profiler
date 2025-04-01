@@ -521,6 +521,25 @@ func (pm *ProcessManager) synchronizeMappings(pr process.Process,
 					log.Debugf("Failed to handle new anonymous mapping for PID %d: process exited",
 						pid)
 				}
+			} else {
+				addedDebugElf, removedDebugElf, err := instance.GetAndResetJitDebugELFs()
+				if err != nil {
+					log.Errorf("Failed to get JIT debug ELFs for PID %d: %v", pid, err)
+				}
+				for _, bundle := range removedDebugElf {
+					log.Debugf("Remove JIT debug ELF %x for PID: %v", bundle.FileID, pid)
+					err := pm.eim.RemoveOrDecRef(bundle.FileID)
+					if err != nil {
+						log.Errorf("Failed to remove JIT debug ELF %v for PID: %v", bundle, pid)
+					}
+				}
+				for _, bundle := range addedDebugElf {
+					log.Debugf("Add JIT debug ELF %x for PID: %v", bundle.FileID, pid)
+					_, err := pm.eim.AddOrIncRef(bundle.FileID, bundle.ElfRef)
+					if err != nil {
+						log.Errorf("Failed to add JIT debug ELF %v for PID: %v", bundle, pid)
+					}
+				}
 			}
 		}
 		pm.mu.Unlock()

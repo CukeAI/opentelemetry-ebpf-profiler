@@ -26,6 +26,7 @@ const (
 	UnwindOpcodeBaseFP    uint8 = C.UNWIND_OPCODE_BASE_FP
 	UnwindOpcodeBaseLR    uint8 = C.UNWIND_OPCODE_BASE_LR
 	UnwindOpcodeBaseReg   uint8 = C.UNWIND_OPCODE_BASE_REG
+	UnwindOpcodeBaseDexPc uint8 = C.UNWIND_OPCODE_BASE_DEX_PC
 	UnwindOpcodeFlagDeref uint8 = C.UNWIND_OPCODEF_DEREF
 
 	// UnwindCommands from the C header file
@@ -49,9 +50,9 @@ const (
 
 // UnwindInfo contains the data needed to unwind PC, SP and FP
 type UnwindInfo struct {
-	Opcode, FPOpcode, RealFPOpcode, MergeOpcode uint8
+	Opcode, FPOpcode, RealFPOpcode, ArchDefOpcode, ArchDef1Opcode, ArchDef2Opcode, ArchDef3Opcode, MergeOpcode uint8
 
-	Param, FPParam, RealFPParam int32
+	Param, FPParam, RealFPParam, ArchDefParam, ArchDef1Param, ArchDef2Param, ArchDef3Param int32
 }
 
 // UnwindInfoInvalid is the stack delta info indicating invalid or unsupported PC.
@@ -140,13 +141,13 @@ func (deltas *StackDeltaArray) Add(delta StackDelta) {
 
 // PackDerefParam compresses pre- and post-dereference parameters to single value
 func PackDerefParam(preDeref, postDeref int32) (int32, bool) {
-	if postDeref < 0 || postDeref > 0x20 || postDeref%UnwindDerefMultiplier != 0 {
+	if postDeref < 0 || preDeref/UnwindDerefMultiplier > 0 {
 		return 0, false
 	}
-	return preDeref + postDeref/UnwindDerefMultiplier, true
+	return preDeref*UnwindDerefMultiplier + postDeref, true
 }
 
 // UnpackDerefParam splits the pre- and post-dereference parameters from single value
 func UnpackDerefParam(param int32) (preDeref, postDeref int32) {
-	return param &^ UnwindDerefMask, (param & UnwindDerefMask) * UnwindDerefMultiplier
+	return (param &^ UnwindDerefMask) / UnwindDerefMultiplier, param & UnwindDerefMask
 }

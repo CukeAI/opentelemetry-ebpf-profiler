@@ -33,6 +33,8 @@ const (
 	Dotnet InterpreterType = support.FrameMarkerDotnet
 	// LuaJIT identifies the LuaJIT interpreter.
 	LuaJIT InterpreterType = support.FrameMarkerLuaJIT
+	// ART identifies the ART interpreter.
+	ART InterpreterType = support.FrameMarkerArt
 )
 
 // Pseudo-interpreters without a corresponding frame type.
@@ -74,6 +76,7 @@ var interpreterTypeToString = map[InterpreterType]string{
 	Dotnet:  "dotnet",
 	APMInt:  "apm-integration",
 	LuaJIT:  "luajit",
+	ART:     "art",
 }
 
 var stringToInterpreterType = make(map[string]InterpreterType, len(interpreterTypeToString))

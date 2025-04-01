@@ -98,8 +98,10 @@ type expressionOpcode uint8
 //nolint:deadcode,varcheck
 const (
 	opDeref      expressionOpcode = 0x06
+	opConst4U    expressionOpcode = 0x0c
 	opConstU     expressionOpcode = 0x10
 	opConstS     expressionOpcode = 0x11
+	opDrop       expressionOpcode = 0x13
 	opRot        expressionOpcode = 0x17
 	opAnd        expressionOpcode = 0x1a
 	opMul        expressionOpcode = 0x1e
@@ -110,6 +112,7 @@ const (
 	opNE         expressionOpcode = 0x2e
 	opLit0       expressionOpcode = 0x30
 	opBReg0      expressionOpcode = 0x70
+	opBRegx      expressionOpcode = 0x92
 )
 
 type dwarfExpression struct {
@@ -302,7 +305,21 @@ func (r *reader) expression() ([]dwarfExpression, error) {
 				opcode:   op,
 				operand1: uleb128(ed.sleb()),
 			})
-		case op == opDeref, op >= opRot && op <= opNE:
+		case op == opConst4U:
+			operand := ed.u32()
+			expr = append(expr, dwarfExpression{
+				opcode:   op,
+				operand1: uleb128(operand),
+			})
+		case op == opBRegx:
+			operand1 := ed.uleb()
+			operand2 := ed.sleb()
+			expr = append(expr, dwarfExpression{
+				opcode:   opBRegx,
+				operand1: uleb128(operand1),
+				operand2: uleb128(operand2),
+			})
+		case op == opDeref, op >= opDrop && op <= opNE:
 			expr = append(expr, dwarfExpression{opcode: op})
 		default:
 			return nil, fmt.Errorf("unsupported expression: %s",
@@ -384,6 +401,7 @@ const (
 	regExprRegDeref    uleb128 = 257
 	regExprRegRegDeref uleb128 = 258
 	regExprReg         uleb128 = 259
+	regExprDexPc       uleb128 = 260
 )
 
 // sigretCodeMap contains the per-machine trampoline to call rt_sigreturn syscall.
@@ -522,6 +540,19 @@ func (reg *vmReg) expression(expr []dwarfExpression) error {
 		reg.off = makeOff(
 			int16(expr[0].operand1), int16(expr[1].operand1),
 			int16(expr[0].operand2), int16(expr[6].operand1))
+	case matchExpression(expr, []expressionOpcode{opBRegx, opDeref, opPlusUConst}):
+		// Register dereference expression (seen in Android libart)
+		reg.reg = regExprRegDeref
+		reg.off = makeOff(int16(expr[0].operand1), 0, int16(expr[0].operand2),
+			int16(expr[2].operand1))
+	case matchExpression(expr, []expressionOpcode{opConst4U, opDrop, opBRegx}):
+		// Register special expression (seen in Android libart)
+		if expr[0].operand1 == 827868484 {
+			reg.reg = regExprDexPc
+			reg.off = makeOff(0, 0, int16(expr[2].operand1), int16(expr[2].operand2))
+		} else {
+			return fmt.Errorf("DWARF expression unmatched: %x", expr)
+		}
 	default:
 		return fmt.Errorf("DWARF expression unmatched: %x", expr)
 	}
@@ -535,6 +566,11 @@ type vmRegs struct {
 	// generic (platform independent) DWARF registers for frame pointer
 	// and return address access
 	fp, ra vmReg
+	// platform specific regs
+	archdef  vmReg
+	archdef1 vmReg
+	archdef2 vmReg
+	archdef3 vmReg
 }
 
 // reg returns the address to vmReg description of the given numeric register
@@ -689,9 +725,17 @@ func (st *state) step(r *reader) error {
 		case cfaValOffsetSf:
 			st.rule(r.uleb(), regCFAVal, r.sleb())
 		case cfaValExpression:
+			value := r.uleb()
+			st.rule(value, regUndefined, 0)
+			expr, err := r.expression()
+			if err == nil {
+				st.cur.reg(armDexPc).expression(expr)
+			} else {
+				log.Debugf("DWARF val expression error: %v", err)
+			}
+			//log.Infof("Val Expression: value: 0x%x", value)
 			// Not really supported, just mark the register undefined
-			st.rule(r.uleb(), regUndefined, 0)
-			r.pos += uintptr(r.uleb())
+			//r.pos += uintptr(r.uleb())
 		case cfaGNUWindowSave:
 			// No handling needed
 		case cfaGNUArgsSize:

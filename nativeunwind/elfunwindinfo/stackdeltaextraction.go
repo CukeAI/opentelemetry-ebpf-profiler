@@ -145,7 +145,8 @@ func ExtractELF(elfRef *pfelf.Reference, interval *sdtypes.IntervalData) error {
 		file:             elfFile,
 		deltas:           &deltas,
 		hooks:            &filter,
-		allowGenericRegs: isLibCrypto(elfFile),
+		allowGenericRegs: true,
+		//allowGenericRegs: isLibCrypto(elfFile),
 	}
 
 	if err = ee.parseGoPclntab(); err != nil {

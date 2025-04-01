@@ -166,10 +166,13 @@ func parseMappings(mapsFile io.Reader) ([]Mapping, uint32, error) {
 				path = VdsoPathName
 				device = 0
 				inode = vdsoInode
+				//} else if strings.HasPrefix(path, "[anon:dalvik-") {
 			} else if path != "" {
 				// Ignore [vsyscall] and similar executable kernel
 				// pages we don't care about
-				continue
+				path = trimMappingPath(path)
+				path = strings.Clone(path)
+				//continue
 			}
 		} else {
 			path = trimMappingPath(path)

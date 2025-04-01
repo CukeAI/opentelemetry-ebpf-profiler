@@ -25,6 +25,7 @@ const (
 	FrameMarkerV8       = C.FRAME_MARKER_V8
 	FrameMarkerDotnet   = C.FRAME_MARKER_DOTNET
 	FrameMarkerLuaJIT   = C.FRAME_MARKER_LUAJIT
+	FrameMarkerArt      = C.FRAME_MARKER_ART
 	FrameMarkerAbort    = C.FRAME_MARKER_ABORT
 )
 
@@ -40,6 +41,7 @@ const (
 	ProgUnwindDotnet  = C.PROG_UNWIND_DOTNET
 	ProgGoLabels      = C.PROG_GO_LABELS
 	ProgUnwindLuaJIT  = C.PROG_UNWIND_LUAJIT
+	ProgUnwindArt     = C.PROG_UNWIND_ART
 )
 
 const (

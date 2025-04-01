@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/ebpf-profiler/host"
 	"go.opentelemetry.io/ebpf-profiler/interpreter"
 	"go.opentelemetry.io/ebpf-profiler/interpreter/apmint"
+	"go.opentelemetry.io/ebpf-profiler/interpreter/art"
 	"go.opentelemetry.io/ebpf-profiler/interpreter/customlabels"
 	"go.opentelemetry.io/ebpf-profiler/interpreter/dotnet"
 	"go.opentelemetry.io/ebpf-profiler/interpreter/golang"
@@ -130,6 +131,9 @@ func NewExecutableInfoManager(
 	}
 	if includeTracers.Has(types.LuaJITTracer) {
 		interpreterLoaders = append(interpreterLoaders, luajit.Loader)
+	}
+	if includeTracers.Has(types.ARTTracer) {
+		interpreterLoaders = append(interpreterLoaders, art.Loader)
 	}
 
 	interpreterLoaders = append(interpreterLoaders, apmint.Loader)

@@ -499,6 +499,11 @@ func initializeMapsAndPrograms(kernelSymbols *libpf.SymbolMap, cfg *Config) (
 			name:   "unwind_luajit",
 			enable: cfg.IncludeTracers.Has(types.LuaJITTracer),
 		},
+		{
+			progID: uint32(support.ProgUnwindArt),
+			name:   "unwind_art",
+			enable: cfg.IncludeTracers.Has(types.ARTTracer),
+		},
 	}
 
 	if err = loadPerfUnwinders(coll, ebpfProgs, ebpfMaps["perf_progs"], tailCallProgs,
