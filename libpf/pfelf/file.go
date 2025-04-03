@@ -223,8 +223,8 @@ func newFile(r io.ReaderAt, closer io.Closer, loadAddress uint64, hasMusl bool) 
 		return nil, ErrNotELF
 	}
 	if elf.Class(hdr.Ident[elf.EI_CLASS]) != elf.ELFCLASS64 ||
-		elf.Data(hdr.Ident[elf.EI_DATA]) != elf.ELFDATA2LSB ||
-		elf.Version(hdr.Ident[elf.EI_VERSION]) != elf.EV_CURRENT {
+		elf.Data(hdr.Ident[elf.EI_DATA]) != elf.ELFDATA2LSB {
+		//elf.Version(hdr.Ident[elf.EI_VERSION]) != elf.EV_CURRENT {
 		return nil, fmt.Errorf("unsupported ELF file: %v", hdr.Ident)
 	}
 
