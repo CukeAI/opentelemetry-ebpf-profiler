@@ -246,12 +246,6 @@ func (pm *ProcessManager) handleNewInterpreter(pr process.Process, m *Mapping,
 // handleNewMapping processes new file backed mappings
 func (pm *ProcessManager) handleNewMapping(pr process.Process, m *Mapping,
 	elfRef *pfelf.Reference) error {
-	// Resolve executable info first
-	ei, err := pm.eim.AddOrIncRef(m.FileID, elfRef)
-	if err != nil {
-		return err
-	}
-
 	pid := pr.PID()
 
 	// We intentionally don't take the lock immediately when entering this function and instead
@@ -261,7 +255,13 @@ func (pm *ProcessManager) handleNewMapping(pr process.Process, m *Mapping,
 	defer pm.mu.Unlock()
 
 	// Update the eBPF maps with information about this mapping.
-	_, err = pm.updatePidInformation(pid, m)
+	_, err := pm.updatePidInformation(pid, m)
+	if err != nil {
+		return err
+	}
+
+	// Resolve executable info later. Even failed to AddOrIncRef, pid information should be updated.
+	ei, err := pm.eim.AddOrIncRef(m.FileID, elfRef)
 	if err != nil {
 		return err
 	}
