@@ -325,6 +325,7 @@ func (pm *ProcessManager) getELFInfo(pr process.Process, mapping *process.Mappin
 	if info.err == nil {
 		pm.elfInfoCache.Add(key, info)
 	}
+	log.Debugf("Mapping file: %v, host fileid: 0x%x", mapping.Path, hostFileID)
 	pm.FileIDMapper.Set(hostFileID, fileID)
 
 	if pm.reporter.ExecutableKnown(fileID) {
