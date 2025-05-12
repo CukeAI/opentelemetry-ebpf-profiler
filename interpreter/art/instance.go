@@ -640,5 +640,11 @@ func (ai *artInstance) GetAndResetJitDebugELFs() ([]interpreter.ElfBundle, []int
 
 func (ai *artInstance) Detach(ebpf interpreter.EbpfHandler, pid libpf.PID) error {
 	log.Debugf("Detach ART interpreter")
-	return nil
+	for _, region := range ai.oldJitRegions {
+		err := ai.removeJitRegion(ebpf, pid, region.start, region.end)
+		if err != nil {
+			log.Warnf("Failed to remove jit region %x:%x for pid %d ART interpreter", region.start, region.end, pid)
+		}
+	}
+	return ebpf.DeleteProcData(libpf.ART, pid)
 }
