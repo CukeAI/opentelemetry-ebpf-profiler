@@ -514,6 +514,13 @@ static inline __attribute__((__always_inline__)) int unwind_art(struct pt_regs *
     u64 cfa = 0;
     DEBUG_PRINT("enter art unwinder: text_section_id: 0x%llx, text_section_bias: 0x%llx, text_section_offset: 0x%llx",
       state->text_section_id, state->text_section_bias, state->text_section_offset);
+
+    if (state->text_section_bias == 0) {
+      DEBUG_PRINT("art: unwinding unmapped JIT frame");
+      // JIT info are not yet mapped, tell the userspace to rescan maps
+      report_pid(ctx, record->trace.pid, RATELIMIT_ACTION_DEFAULT);
+    }
+
     increment_metric(metricID_UnwindArtAttempts);
     struct UnwindInfo *uinfo = NULL;
     err = resolve_unwind_info_and_cfa(state, &uinfo, &cfa);
