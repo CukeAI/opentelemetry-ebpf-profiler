@@ -22,6 +22,8 @@ int tracepoint__sched_process_exit(void *ctx)
     goto exit;
   }
 
+  bpf_map_delete_elem(&pid_cgroup_info, &pid);
+
   if (!bpf_map_lookup_elem(&reported_pids, &pid) && !pid_information_exists(ctx, pid)) {
     // Only report PIDs that we explicitly track. This avoids sending kernel worker PIDs
     // to userspace.

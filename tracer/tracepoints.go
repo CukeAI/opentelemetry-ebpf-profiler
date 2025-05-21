@@ -39,3 +39,10 @@ func (t *Tracer) AttachSchedMonitor() error {
 	prog := t.ebpfProgs["tracepoint__sched_process_exit"]
 	return t.attachToTracepoint("sched", "sched_process_exit", prog)
 }
+
+// AttachCgroupMonitor attaches a kprobe to the cgroup attach task. This hook detects the
+// attach of a process to a cgroup.
+func (t *Tracer) AttachCgroupMonitor() error {
+	prog := t.ebpfProgs["tracepoint__cgroup_attach_task"]
+	return t.attachToTracepoint("cgroup", "cgroup_attach_task", prog)
+}

@@ -616,6 +616,11 @@ func loadPerfUnwinders(coll *cebpf.CollectionSpec, ebpfProgs map[string]*cebpf.P
 			enable:           true,
 		},
 		progLoaderHelper{
+			name:             "tracepoint__cgroup_attach_task",
+			noTailCallTarget: true,
+			enable:           true,
+		},
+		progLoaderHelper{
 			name:             "native_tracer_entry",
 			noTailCallTarget: true,
 			enable:           true,
@@ -1011,6 +1016,11 @@ func (t *Tracer) loadBpfTrace(raw []byte, cpu int) *host.Trace {
 		KTime:            times.KTime(ptr.ktime),
 		CPU:              cpu,
 		EnvVars:          procMeta.EnvVariables,
+	}
+
+	trace.CgroupIDs = make([]uint64, C.MAX_CGROUP_ROOTS)
+	for i := 0; i < C.MAX_CGROUP_ROOTS; i++ {
+		trace.CgroupIDs[i] = uint64(ptr.cgroup_ids[i])
 	}
 
 	if trace.Origin != support.TraceOriginSampling && trace.Origin != support.TraceOriginOffCPU {

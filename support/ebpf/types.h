@@ -655,6 +655,13 @@ typedef struct CustomLabelsArray {
   CustomLabel labels[MAX_CUSTOM_LABELS];
 } CustomLabelsArray;
 
+#define MAX_CGROUP_ROOTS 8
+
+typedef struct CgroupInfo {
+  u64 id[MAX_CGROUP_ROOTS];
+} CgroupInfo;
+
+
 // Container for a stack trace
 typedef struct Trace {
   // The process ID
@@ -683,6 +690,8 @@ typedef struct Trace {
 
   // offtime stores the nanoseconds that the trace was off-cpu for.
   u64 offtime;
+
+  u64 cgroup_ids[MAX_CGROUP_ROOTS];
 
   // The frames of the stack trace.
   Frame frames[MAX_FRAME_UNWINDS];

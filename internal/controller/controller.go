@@ -137,6 +137,11 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to attach scheduler monitor: %w", err)
 	}
 
+	if err := trc.AttachCgroupMonitor(); err != nil {
+		return fmt.Errorf("failed to attach cgroup monitor: %w", err)
+	}
+	log.Printf("Attached cgroup monitor")
+
 	// This log line is used in our system tests to verify if that the agent has started. So if you
 	// change this log line update also the system test.
 	log.Printf("Attached sched monitor")

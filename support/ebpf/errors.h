@@ -22,6 +22,12 @@ typedef enum ErrorCode {
   // Maximum number of tail calls was reached
   ERR_MAX_TAIL_CALLS = 5,
 
+  // See MAX_CGROUP_ROOTS
+  ERR_CGROUP_OUT_OF_RANGE = 98,
+
+  // Failed to update cgroup information
+  ERR_CGROUP_UPDATE = 99,
+
   // Hotspot: Failure to get CodeBlob address (no heap or bad segmap)
   ERR_HOTSPOT_NO_CODEBLOB = 1000,
 

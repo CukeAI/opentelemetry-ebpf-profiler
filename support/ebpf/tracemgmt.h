@@ -739,6 +739,11 @@ static inline int collect_trace(
     increment_metric(metricID_ErrBPFCurrentComm);
   }
 
+  CgroupInfo *cgroup = bpf_map_lookup_elem(&pid_cgroup_info, &pid);
+  for (int i = 0; i < MAX_CGROUP_ROOTS; i++) {
+    trace->cgroup_ids[i] = cgroup ? cgroup->id[i] : 0;
+  }
+
   // Get the kernel mode stack trace first
   trace->kernel_stack_id = bpf_get_stackid(ctx, &kernel_stackmap, BPF_F_REUSE_STACKID);
   DEBUG_PRINT("kernel stack id = %d", trace->kernel_stack_id);

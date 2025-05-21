@@ -62,6 +62,7 @@ type Trace struct {
 	APMTraceID       libpf.APMTraceID
 	APMTransactionID libpf.APMTransactionID
 	CPU              int
+	CgroupIDs        []uint64
 	EnvVars          map[string]string
 	CustomLabels     map[string]string
 }
