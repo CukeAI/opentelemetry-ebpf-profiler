@@ -22,12 +22,6 @@ typedef enum ErrorCode {
   // Maximum number of tail calls was reached
   ERR_MAX_TAIL_CALLS = 5,
 
-  // See MAX_CGROUP_ROOTS
-  ERR_CGROUP_OUT_OF_RANGE = 98,
-
-  // Failed to update cgroup information
-  ERR_CGROUP_UPDATE = 99,
-
   // Hotspot: Failure to get CodeBlob address (no heap or bad segmap)
   ERR_HOTSPOT_NO_CODEBLOB = 1000,
 
@@ -127,8 +121,7 @@ typedef enum ErrorCode {
   // Native: Unable to read the IRQ stack link
   ERR_NATIVE_CHASE_IRQ_STACK_LINK = 4010,
 
-  // Native: Unexpectedly encountered a kernel mode pointer while attempting to unwind user-mode
-  // stack
+  // Native: Unexpectedly encountered a kernel mode pointer while attempting to unwind user-mode stack
   ERR_NATIVE_UNEXPECTED_KERNEL_ADDRESS = 4011,
 
   // Native: Unable to locate the PID page mapping for the current instruction pointer
@@ -183,47 +176,7 @@ typedef enum ErrorCode {
   ERR_LUAJIT_L_MISMATCH = 7003,
 
   // LuaJIT: PC exceeds 24 bits
-  ERR_LUAJIT_INVALID_PC = 7004,
-
-  // ART: skip art unwinding
-  ERR_ART_SKIP = 8000,
-
-  // ART: No entry for this process exists in the ART process info array
-  ERR_ART_NO_PROC_INFO = 8001,
-
-  // ART: Empty stack
-  ERR_ART_EMPTY_STACK = 8002,
-
-  // ART: Unable to look up unwind info
-  ERR_ART_NO_UNWIND_INFO = 8003,
-
-  // ART: Bad CFA value
-  ERR_ART_BAD_CFA = 8004,
-
-  // ART: Invalid input parameter
-  ERR_ART_INVALID_PARAM = 8005,
-
-  // ART: Unable to look up the outer stack delta map (invalid map ID)
-  ERR_ART_LOOKUP_STACK_DELTA_OUTER_MAP = 8006,
-
-  // ART: Unable to look up the inner stack delta map (unknown text section ID)
-  ERR_ART_LOOKUP_STACK_DELTA_INNER_MAP = 8007,
-
-  // ART: Exceeded the maximum number of binary search steps during stack delta lookup
-  ERR_ART_EXCEEDED_DELTA_LOOKUP_ITERATIONS = 8008,
-
-  // ART: Unable to look up the stack delta from the inner map
-  ERR_ART_LOOKUP_RANGE = 8009,
-
-  // ART: Unable to find the code section in the stack delta page info map
-  ERR_ART_LOOKUP_TEXT_SECTION = 8010,
-
-  // ART: The stack delta read from the delta map is marked as invalid
-  ERR_ART_STACK_DELTA_INVALID = 8011,
-
-  // ART: The stack delta read from the delta map is a stop record
-  ERR_ART_STACK_DELTA_STOP = 8012,
-
+  ERR_LUAJIT_INVALID_PC = 7004
 } ErrorCode;
 
 #endif // OPTI_ERRORS_H

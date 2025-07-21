@@ -67,7 +67,19 @@ func (m *mockReporter) ReportTraceEvent(trace *libpf.Trace, _ *samples.TraceEven
 	return nil
 }
 
-func TestTraceHandler(t *testing.T) {
+func TestTraceHandler_hash(t *testing.T) {
+	libpf.NewTraceHash(4, 4)
+}
+
+func TestTraceHandler_upload(t *testing.T) {
+}
+
+
+func TestTraceHandler_metrix(t *testing.T) {
+}
+
+func TestTraceHandler_merge(t *testing.T) {
+	t.Logf("++entry TestTraceTransmissionAndParsing")
 	tests := map[string]struct {
 		input          []arguments
 		expireTimeout  time.Duration
@@ -82,17 +94,17 @@ func TestTraceHandler(t *testing.T) {
 			{trace: &host.Trace{Hash: host.TraceHash(0x1234)}},
 		},
 			expectedEvents: map[libpf.TraceHash]uint16{
-				libpf.NewTraceHash(0x1234, 0x1234): 1,
+				libpf.NewTraceHash(0x1234, 0x1234): 1,  // 64bit include high 32 and low 32
 			},
 		},
 
 		// double trace simulates a case where the same trace is encountered in quick succession.
 		"double trace": {input: []arguments{
-			{trace: &host.Trace{Hash: host.TraceHash(4)}},
+			{trace: &host.Trace{Hash: host.TraceHash(4)}},  // same trace 
 			{trace: &host.Trace{Hash: host.TraceHash(4)}},
 		},
 			expectedEvents: map[libpf.TraceHash]uint16{
-				libpf.NewTraceHash(4, 4): 2,
+				libpf.NewTraceHash(4, 4): 2,  // two events
 			},
 		},
 	}

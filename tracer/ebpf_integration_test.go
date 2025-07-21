@@ -1,4 +1,4 @@
-//go:build integration && linux
+//go:build linux
 
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -99,6 +99,8 @@ func generateMaxLengthTrace() host.Trace {
 }
 
 func TestTraceTransmissionAndParsing(t *testing.T) {
+
+	t.Logf("++entry TestTraceTransmissionAndParsing")
 	ctx := context.Background()
 
 	enabledTracers, _ := tracertypes.Parse("")
@@ -232,6 +234,24 @@ Loop:
 }
 
 func TestAllTracers(t *testing.T) {
-	_, _ = testutils.StartTracer(context.Background(), t, tracertypes.AllTracers(),
+	_, _ = testutils.StartTracer(context.Background(), t, 
+	    tracertypes.AllTracers(),
 		&testutils.MockReporter{})
+}
+
+// what is the expected result
+func TestPerlTracers(t *testing.T) {
+	_, _ = testutils.StartTracer(context.Background(), t, //tracertypes.AllTracers(),
+	    tracertypes.PerlTracers(),
+		&testutils.MockReporter{})
+}
+
+func TestNativeTracers(t *testing.T) {
+	_, _ = testutils.StartTracer(context.Background(), t, //tracertypes.AllTracers(),
+	    tracertypes.NativeTracers(),
+		&testutils.MockReporter{})
+}
+
+func loadEBPF(t *testing.T) {
+
 }

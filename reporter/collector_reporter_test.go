@@ -54,7 +54,7 @@ func TestCollectorReporterReportTraceEvent(t *testing.T) {
 			r, err := NewCollector(&Config{
 				ExecutablesCacheElements: 1,
 				FramesCacheElements:      1,
-				CGroupCacheElements:      1,
+				CGroupCacheElements:      1,  // use the cgroup ?
 			}, next)
 			require.NoError(t, err)
 			if err := r.ReportTraceEvent(tt.trace, tt.meta); err != nil &&

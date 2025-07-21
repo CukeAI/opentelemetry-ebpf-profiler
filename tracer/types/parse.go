@@ -165,3 +165,15 @@ func AllTracers() IncludedTracers {
 	result.enableAll()
 	return result
 }
+
+func PerlTracers() IncludedTracers {
+	var result IncludedTracers
+	result.Enable(PerlTracer)
+	return result
+}
+
+func NativeTracers() IncludedTracers {
+	var result IncludedTracers
+	//result.Enable(PerlTracer)
+	return result
+}

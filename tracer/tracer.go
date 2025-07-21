@@ -446,13 +446,13 @@ func initializeMapsAndPrograms(kernelSymbols *libpf.SymbolMap, cfg *Config) (
 	tailCallProgs := []progLoaderHelper{
 		{
 			progID: uint32(support.ProgUnwindStop),
-			name:   "unwind_stop",
+			name:   "unwind_stop",  //which is not programming launguage
 			enable: true,
 		},
 		{
 			progID: uint32(support.ProgUnwindNative),
-			name:   "unwind_native",
-			enable: true,
+			name:   "unwind_native", 
+			enable: true,  // default enable, which is not programming launguage
 		},
 		{
 			progID: uint32(support.ProgUnwindHotspot),
@@ -607,19 +607,19 @@ func loadPerfUnwinders(coll *cebpf.CollectionSpec, ebpfProgs map[string]*cebpf.P
 		LogLevel: cebpf.LogLevel(bpfVerifierLogLevel),
 	}
 
-	progs := make([]progLoaderHelper, len(tailCallProgs)+2)
+	progs := make([]progLoaderHelper, len(tailCallProgs)+1)
 	copy(progs, tailCallProgs)
 	progs = append(progs,
-		progLoaderHelper{
-			name:             "tracepoint__sched_process_exit",
-			noTailCallTarget: true,
-			enable:           true,
-		},
-		progLoaderHelper{
-			name:             "tracepoint__cgroup_attach_task",
-			noTailCallTarget: true,
-			enable:           true,
-		},
+		//progLoaderHelper{
+			//name:             "tracepoint__sched_process_exit",
+			//noTailCallTarget: true,
+			//enable:           false,
+		//},
+		//progLoaderHelper{
+		//	name:             "tracepoint__cgroup_attach_task",
+		//	noTailCallTarget: true,
+		//	enable:           false,
+		//},
 		progLoaderHelper{
 			name:             "native_tracer_entry",
 			noTailCallTarget: true,

@@ -14,7 +14,7 @@ func TestUint64(t *testing.T) {
 	tests := map[string]struct {
 		input  uint64
 		expect uint64
-	}{
+	} {
 		"0":          {input: 0, expect: 0},
 		"1":          {input: 1, expect: 12994781566227106604},
 		"uint16 max": {input: uint64(math.MaxUint16), expect: 6444452806975366496},

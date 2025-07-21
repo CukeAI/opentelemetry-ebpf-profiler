@@ -179,7 +179,7 @@ func Start(ctx context.Context, rep reporter.TraceReporter, traceProcessor Trace
 		metricsTicker := time.NewTicker(intervals.MonitorInterval())
 		defer metricsTicker.Stop()
 
-		// Poll the output channels
+		// Poll the output channels， how about the traceUpdate interval ?
 		for {
 			select {
 			case traceUpdate := <-traceInChan:

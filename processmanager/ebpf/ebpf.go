@@ -227,11 +227,12 @@ func LoadMaps(ctx context.Context, maps map[string]*cebpf.Map) (EbpfHandler, err
 	}
 	impl.luajitProcs = luajitProcs
 
-	artProcs, ok := maps["art_procs"]
-	if !ok {
-		log.Fatalf("Map art_procs is not available")
-	}
-	impl.artProcs = artProcs
+    // only for arm64 
+	//artProcs, ok := maps["art_procs"]
+	//if !ok {
+	//	log.Fatalf("Map art_procs is not available")
+	//}
+	//impl.artProcs = artProcs
 
 	impl.stackDeltaPageToInfo, ok = maps["stack_delta_page_to_info"]
 	if !ok {
@@ -272,6 +273,7 @@ func LoadMaps(ctx context.Context, maps map[string]*cebpf.Map) (EbpfHandler, err
 		log.Infof("Supports LPM trie eBPF map batch operations")
 		impl.hasLPMTrieBatchOperations = true
 	}
+
 
 	impl.updateWorkers = newAsyncMapUpdaterPool(ctx, updatePoolWorkers, updatePoolQueueCap)
 
